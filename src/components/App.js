@@ -1,0 +1,113 @@
+import React from 'react';
+import './App.css';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './auth/AuthProvider.js';
+import ProtectedRoute from './auth/protectedRoute.js';
+import Login from './auth/login.js';
+import Signup from './auth/signup.js';
+import ForgotPassword from './auth/forgotPassword.js';
+import Sidebar from './layouts/Sidebar.js';
+import Students from './studentPayments/students/students.js';
+import Fees from './studentPayments/fees.js';
+import StudentView from './studentPayments/students/StudentView.js';
+import Commission from './cashTransactions/commission.js';
+import Report from './layouts/report.js';
+import Invoice from './studentPayments/reports/invoice.js';
+import Profile from './profile/profile.js';
+import MarkSchedule from './academic/markSchedule.js';
+import Attendance from './academic/Attendance.js';
+import AddGrade from './academic/AddGrade.js';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { AppThemeProvider } from '../contexts/ThemeContext.js'
+import { ToastProvider } from '../contexts/ToastContext.js';
+import AdminDashboard from './dashboard/AdminDashboard';
+import TeacherDashboard from './dashboard/TeacherDashboard';
+import ParentDashboard from './dashboard/ParentDashboard';
+import BursarDashboard from './dashboard/BursarDashboard';
+import { useUserRole } from './../contexts/useUserRole.js'
+import OutgoingIncomingView from './bankTransactions/view.js';
+import BulkInvoicing from './dashboard/bulkInvoicing.js';
+import Vendors from './bankTransactions/vendors.js';
+import ViewInvoices from './bankTransactions/viewInvoices.js';
+import ViewPC from './cashTransactions/viewPC.js';
+import Cashbook from './financials/cashbook.js';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      cacheTime: 1000 * 60 * 10, // 10 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+function AppContent() {
+  const { user, role, isLoading } = useUserRole();
+
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-screen dark:bg-gray-900 text-white">Loading application...</div>;
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
+  switch (role) {
+    case 'administrator': return <AdminDashboard />;
+    case 'teacher': return <TeacherDashboard />;
+    case 'parent': return <ParentDashboard />;
+    case 'bursar': return <BursarDashboard />;
+    default: return <div>Unknown role</div>;
+  }
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      {/* Auth Routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/" element={<Login />} />
+      <Route path="/bulk-invoicing" element={<ProtectedRoute allowedRoles={['bursar']}><Sidebar><BulkInvoicing /></Sidebar></ProtectedRoute>} />
+      <Route path="/students" element={<ProtectedRoute allowedRoles={['administrator', 'bursar', 'teacher']}><Sidebar><Students /></Sidebar></ProtectedRoute>} />
+      <Route path="/student-view/:studentId" element={<ProtectedRoute allowedRoles={['parent', 'bursar', 'teacher']}><Sidebar><StudentView /></Sidebar></ProtectedRoute>} />
+      <Route path="/parent-dashboard/:studentId?" element={<ProtectedRoute allowedRoles={['parent']}><Sidebar><ParentDashboard /></Sidebar></ProtectedRoute>} />
+      <Route path="/fees" element={<ProtectedRoute allowedRoles={['administrator', 'bursar']}><Sidebar><Fees /></Sidebar></ProtectedRoute>} />
+      <Route path="/commission" element={<ProtectedRoute allowedRoles={['bursar']}><Sidebar><Commission /></Sidebar></ProtectedRoute>} />
+      <Route path="/transactions" element={<ProtectedRoute allowedRoles={['administrator', 'bursar']}><Sidebar><OutgoingIncomingView /></Sidebar></ProtectedRoute>} />
+      <Route path="/reports" element={<ProtectedRoute allowedRoles={['administrator', 'bursar']}><Sidebar><Report /></Sidebar></ProtectedRoute>} />
+      <Route path="/invoice/:studentId" element={<ProtectedRoute allowedRoles={['teacher', 'bursar', 'parent']}><Sidebar><Invoice /></Sidebar></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute allowedRoles={['administrator', 'bursar', 'teacher', 'parent']}><Sidebar><Profile /></Sidebar></ProtectedRoute>} />
+      <Route path="/mark-schedule" element={<ProtectedRoute allowedRoles={['teacher']}><Sidebar><MarkSchedule /></Sidebar></ProtectedRoute>} />
+      <Route path="/attendance" element={<ProtectedRoute allowedRoles={['teacher']}><Sidebar><Attendance /></Sidebar></ProtectedRoute>} />
+      <Route path="/add-grade/:studentId" element={<ProtectedRoute allowedRoles={['teacher']}><Sidebar><AddGrade /></Sidebar></ProtectedRoute>} />
+      <Route path="/view-invoices" element={<ProtectedRoute allowedRoles={['administrator', 'bursar']}><Sidebar><ViewInvoices /></Sidebar></ProtectedRoute>} />
+      <Route path="/vendors" element={<ProtectedRoute allowedRoles={['administrator', 'bursar']}><Sidebar><Vendors /></Sidebar></ProtectedRoute>} />
+      <Route path="/view-pc" element={<ProtectedRoute allowedRoles={['administrator', 'bursar']}><Sidebar><ViewPC /></Sidebar></ProtectedRoute>} />
+      <Route path="/cashbook" element={<ProtectedRoute allowedRoles={['administrator', 'bursar']}><Sidebar><Cashbook /></Sidebar></ProtectedRoute>} />
+      <Route path="*" element={<ProtectedRoute allowedRoles={['administrator', 'bursar', 'teacher', 'parent']}><Sidebar><h1> 404 - Not Found</h1></Sidebar></ProtectedRoute>} />
+    </Routes>
+  );
+}
+
+function AppWrapper() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppThemeProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <Router>
+              <AppRoutes />
+              <ReactQueryDevtools initialIsOpen={false} />
+            </Router>
+          </AuthProvider>
+        </ToastProvider>
+      </AppThemeProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default AppWrapper;
